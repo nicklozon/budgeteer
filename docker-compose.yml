@@ -1,0 +1,35 @@
+version: '3.1'
+
+services:
+  web:
+    image: budgeteer
+    build: .
+    environment:
+      RAILS_ENV: development
+      DB_URL: postgres://testuser:testpassword@db:5432/budgeteer_dev
+      LOG_LEVEL: debug
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/rails
+      - /app/vendor/bundle
+      - bundle_cache:/usr/local/bundle/cache
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16.1
+    restart: unless-stopped
+    ports:
+     - 5432:5432
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: budgeteer_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  bundle_cache:
+  pgdata:
+
