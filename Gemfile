@@ -56,6 +56,7 @@ group :development, :test do
   gem 'rubocop-factory_bot', require: false
   gem 'rubocop-minitest', require: false
   gem 'rubocop-rails', require: false
+  gem 'ruby-lsp-rails'
 end
 
 group :development do
