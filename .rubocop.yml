@@ -22,5 +22,13 @@ Metrics/MethodLength:
 Style/Documentation:
   Enabled: false
 
+# TODO: is there a configuration that is better than disabling?
+Style/GuardClause:
+  Enabled: false
+
+# TODO: is there a configuration that is better than disabling?
+Style/IfUnlessModifier:
+  Enabled: false
+
 Style/SymbolArray:
   EnforcedStyle: brackets
