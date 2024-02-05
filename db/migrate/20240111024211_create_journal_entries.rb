@@ -6,6 +6,7 @@ class CreateJournalEntries < ActiveRecord::Migration[7.1]
       t.string :description, null: false
       t.integer :transaction_type, null: false
       t.integer :amount_in_cents, null: false
+      t.decimal :exchange_rate, precision: 18, scale: 8
       t.integer :balance, null: false
       t.datetime :posted_date, null: false
       t.datetime :cleared_date, null: false
@@ -16,6 +17,7 @@ class CreateJournalEntries < ActiveRecord::Migration[7.1]
       t.references :next_entry, foreign_key: { to_table: :journal_entries }
 
       t.index [:account_id, :next_entry_id], unique: true
+      t.index [:account_id, :order], unique: true
 
       t.timestamps
     end

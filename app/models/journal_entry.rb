@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class JournalEntry < ApplicationRecord
+  default_scope { order(order: :asc) }
+
   belongs_to :account
   belongs_to :matching_entry, class_name: 'JournalEntry'
   has_one :next_entry, class_name: 'JournalEntry', dependent: :destroy
@@ -15,9 +17,10 @@ class JournalEntry < ApplicationRecord
   validates :amount_in_cents, numericality: { greater_than: 0 }
   validate :validate_entry_integrity
 
-  before_create :assign_next_entry
+  before_create :assign_associated_entries
 
   def amount
+    # TODO: convert using exchange rate if present
     Money.from_cents(
       amount_in_cents * JournalEntry.transaction_types[transaction_type],
       account.currency
@@ -25,6 +28,7 @@ class JournalEntry < ApplicationRecord
   end
 
   def amount=(value)
+    # TODO: convert using exchange rate if present
     self.amount_in_cents = Money.from_amount(
       value,
       account.currency
@@ -46,8 +50,6 @@ class JournalEntry < ApplicationRecord
     return unless matching_entry
 
     if amount_in_cents != matching_entry.amount_in_cents
-      # TODO: wait, what if accounts are different currencies?
-      #   Should all amounts be in the native currency and then an exchange rate applied at the entry level?
       errors.add(:amount, 'must equal matching entry')
     end
 
@@ -58,23 +60,36 @@ class JournalEntry < ApplicationRecord
     if account == matching_entry.account
       errors.add(:account, 'must differ from matching entry')
     end
+
+    # TODO: validate that posted_date <= next_entry date if set
+    # TODO: validate that posted_date >= previous_entry date of next_entry if set
   end
 
-  def assign_next_entry
-    # next_entry = JournalEntry
-    #  .where(account: account)
-    #  .and
-    # find next tx
-    #  - acct
-    #  - posted_date > date OR
-    #  - (posted_date == date AND order > order)
-    #  - order by posted_date - order # needs index?
-    #  - limit 1
-    # .first
+  def assign_associated_entries
+    # TODO: test that assignment occurs if not specified
+    # TODO: test that next_entry
+    self.next_entry ||= account
+                        .journal_entries
+                        .where('posted_date > ?', posted_date)
+                        .first
 
-    # TODO: Start a DB transaction?
+    self.previous_entry = next_entry&.previous_entry || account
+                          .journal_entries
+                          .where('posted_date <= ?', posted_date)
+                          .last
+  end
 
-    self.previous_entry = next_entry.previous_entry
-    self.next_entry = next_entry
+  # TODO: This should be done only if next_entry is changed?
+  #   - maybe we move this to a command
+  def assign_order_number
+    # TODO: set order number
+    #   previous_entry.order + 1
+    # TODO: set next_entry order number
+    #   order + 1
+    #   This will create an n+1 and violate the unique index
+    #     - we can fetch account entries ordered by order: :desc and process in batches until next_entry is hit
+
+    # TODO: can we raise an error if we're not in a transaction?
+    #  - could stuff the transaction in a CurrentAttributes record...
   end
 end
