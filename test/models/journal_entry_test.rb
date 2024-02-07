@@ -55,4 +55,34 @@ class JournalEntryTest < ActiveSupport::TestCase
       credit_entry.matching_entry = debit_entry
     end
   end
+
+  test '#amount does not perform any conversion when exchange rate is not set' do
+    credit_entry = build(:credit)
+
+    assert_nil credit_entry.exchange_rate
+    assert_in_delta(123.45, credit_entry.amount)
+  end
+
+  test '#amount performs conversion when exchange rate is set' do
+    credit_entry = build(:credit, exchange_rate: 0.81004)
+
+    assert_in_delta(100.00, credit_entry.amount)
+  end
+
+  test '#amount= does not perform any conversion when exchange rate is not set' do
+    credit_entry = build(:credit)
+
+    credit_entry.amount = 543.21
+
+    assert_nil credit_entry.exchange_rate
+    assert_in_delta(543.21, credit_entry.amount)
+  end
+
+  test '#amount= performs conversion when exchange rate is set' do
+    credit_entry = build(:credit, exchange_rate: 0.81004)
+
+    credit_entry.amount = 100
+
+    assert_in_delta(12_345, credit_entry.amount_in_cents)
+  end
 end

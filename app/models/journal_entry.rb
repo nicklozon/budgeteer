@@ -19,20 +19,26 @@ class JournalEntry < ApplicationRecord
 
   before_create :assign_associated_entries
 
+  ##
+  # Retrieves amount in currency of the account
   def amount
-    # TODO: convert using exchange rate if present
+    exchange_rate = self.exchange_rate || 1
+
     Money.from_cents(
-      amount_in_cents * JournalEntry.transaction_types[transaction_type],
+      amount_in_cents * JournalEntry.transaction_types[transaction_type] * exchange_rate,
       account.currency
     ).to_f
   end
 
+  ##
+  # Assigns amount in currency of the account
   def amount=(value)
-    # TODO: convert using exchange rate if present
+    exchange_rate = self.exchange_rate || 1
+
     self.amount_in_cents = Money.from_amount(
       value,
       account.currency
-    ).cents
+    ).cents / exchange_rate
   end
 
   def matching_entry=(entry)
