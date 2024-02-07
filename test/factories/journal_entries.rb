@@ -4,12 +4,15 @@ FactoryBot.define do
   sequence :journal_entry_id
 
   factory :journal_entry, class: 'JournalEntry' do
-    id { generate(:journal_entry_id) }
     amount_in_cents { 12_345 }
     balance { 123.45 } # TODO: should be in cents
     description { 'Jaffa Cakes Co.' }
     posted_date { DateTime.now }
     cleared_date { DateTime.now }
+
+    trait :id do
+      id { generate(:journal_entry_id) }
+    end
 
     trait :credit do
       transaction_type { 1 }
