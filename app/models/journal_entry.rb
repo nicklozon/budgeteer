@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
+##
+# Represents one side of a double-entry transaction, which are doubly-associated to one another
+#
+# DB schema and model validations ensure the double-entry transactions are accurate and fault-tolerant
 class JournalEntry < ApplicationRecord
   default_scope { order(order: :asc) }
 
   belongs_to :account
-  belongs_to :matching_entry, class_name: 'JournalEntry'
-  has_one :next_entry, class_name: 'JournalEntry', dependent: :destroy
+  belongs_to :matching_entry, class_name: 'JournalEntry', autosave: true, validate: false
+  belongs_to :next_entry, class_name: 'JournalEntry', optional: true, autosave: true, dependent: :destroy
   has_one :previous_entry, class_name: 'JournalEntry', foreign_key: :next_entry_id,
                            inverse_of: :next_entry, dependent: :destroy
 
@@ -14,10 +18,13 @@ class JournalEntry < ApplicationRecord
     debit: -1
   }
 
+  validates :posted_date, presence: true
   validates :amount_in_cents, numericality: { greater_than: 0 }
   validate :validate_entry_integrity
+  validate :validate_posted_date
 
   before_create :assign_associated_entries
+  # TODO: before destroy to associate previous/next entries
 
   ##
   # Retrieves amount in currency of the account
@@ -41,6 +48,8 @@ class JournalEntry < ApplicationRecord
     ).cents / exchange_rate
   end
 
+  ##
+  # Associates two journal entries together
   def matching_entry=(entry)
     if entry.matching_entry && entry.matching_entry != self
       raise StandardError, "Invalid Matching Journal Entry: #{entry.id} already has a matching entry"
@@ -66,9 +75,21 @@ class JournalEntry < ApplicationRecord
     if account == matching_entry.account
       errors.add(:account, 'must differ from matching entry')
     end
+  end
 
-    # TODO: validate that posted_date <= next_entry date if set
-    # TODO: validate that posted_date >= previous_entry date of next_entry if set
+  # TODO: needs testing
+  def validate_posted_date
+    return unless next_entry
+
+    if posted_date > next_entry.posted_date
+      errors.add(:posted_date, 'must be after proceding account entry')
+    end
+
+    return unless next_entry.previous_entry
+
+    if posted_date < next_entry.previous_entry&.posted_date
+      errors.add(:posted_date, 'must be before preceding account entry')
+    end
   end
 
   def assign_associated_entries

@@ -32,7 +32,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_11_024211) do
     t.datetime "cleared_date", null: false
     t.integer "order"
     t.bigint "account_id", null: false
-    t.bigint "matching_entry_id", null: false
+    t.bigint "matching_entry_id"
     t.bigint "next_entry_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

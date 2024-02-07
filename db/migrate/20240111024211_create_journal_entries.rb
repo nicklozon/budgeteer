@@ -13,7 +13,7 @@ class CreateJournalEntries < ActiveRecord::Migration[7.1]
       t.integer :order
 
       t.references :account, null: false, foreign_key: true
-      t.references :matching_entry, null: false, foreign_key: { to_table: :journal_entries }, index: { unique: true }
+      t.references :matching_entry, foreign_key: { to_table: :journal_entries }, index: { unique: true }
       t.references :next_entry, foreign_key: { to_table: :journal_entries }
 
       t.index [:account_id, :next_entry_id], unique: true
