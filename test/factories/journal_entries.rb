@@ -7,8 +7,8 @@ FactoryBot.define do
     amount_in_cents { 12_345 }
     balance { 123.45 } # TODO: should be in cents
     description { 'Jaffa Cakes Co.' }
-    posted_date { DateTime.now }
-    cleared_date { DateTime.now }
+    posted_date { Time.zone.today }
+    cleared_date { Time.zone.today }
 
     trait :id do
       id { generate(:journal_entry_id) }

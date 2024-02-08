@@ -11,7 +11,7 @@ class JournalEntry < ApplicationRecord
 
   belongs_to :account
   belongs_to :matching_entry, class_name: 'JournalEntry', autosave: true, validate: false
-  belongs_to :next_entry, class_name: 'JournalEntry', optional: true, autosave: true
+  belongs_to :next_entry, class_name: 'JournalEntry', optional: true, autosave: true, validate: false
   has_one :previous_entry, class_name: 'JournalEntry', foreign_key: :next_entry_id,
                            inverse_of: :next_entry, dependent: :destroy
 
@@ -26,6 +26,7 @@ class JournalEntry < ApplicationRecord
   validate :validate_posted_date
 
   before_create :assign_associated_entries
+  before_create :assign_order_number
   # TODO: prevent mutation to next_entry
   # TODO: before destroy to associate previous/next entries
 
@@ -63,6 +64,7 @@ class JournalEntry < ApplicationRecord
   end
 
   def assign_order_number
+    # TODO
     # [1,2] -> [1,x,2] -> [1,2,3]
     # [1,2][1] -> [1,2][x,1] -> [1,2][1,2]
     # if previous_entry.posted_date == posted_date
@@ -91,17 +93,12 @@ class JournalEntry < ApplicationRecord
     end
   end
 
-  # TODO: needs testing
   def validate_posted_date
-    return unless next_entry
-
-    if posted_date > next_entry.posted_date
+    if next_entry && posted_date > next_entry.posted_date
       errors.add(:posted_date, 'must be after proceding account entry')
     end
 
-    return unless next_entry.previous_entry
-
-    if posted_date < next_entry.previous_entry&.posted_date
+    if previous_entry && posted_date < previous_entry.posted_date
       errors.add(:posted_date, 'must be before preceding account entry')
     end
   end

@@ -16,6 +16,10 @@ Metrics/AbcSize:
 Metrics/BlockLength:
   Enabled: false
 
+Metrics/ClassLength:
+  Exclude:
+    - test/**/*
+
 Metrics/MethodLength:
   Enabled: false
 

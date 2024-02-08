@@ -89,7 +89,7 @@ class JournalEntryTest < ActiveSupport::TestCase
   test '#save assigns next_entry for first transaction of after posted_date' do
     account = create(:asset_account)
     new_entry = build(:credit, account:, matching_entry: build(:debit))
-    existing_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+    existing_entry = create(:credit, account:, posted_date: Time.zone.today + 2.days, matching_entry: build(:debit))
 
     new_entry.save!
 
@@ -109,7 +109,7 @@ class JournalEntryTest < ActiveSupport::TestCase
   test '#save assigns previous_entry to that of next entry\'s' do
     account = create(:asset_account)
     new_entry = build(:credit, account:, matching_entry: build(:debit))
-    next_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+    next_entry = create(:credit, account:, posted_date: Time.zone.today + 2.days, matching_entry: build(:debit))
     previous_entry = create(:credit, account:, next_entry:, matching_entry: build(:debit))
 
     new_entry.save!
@@ -121,7 +121,7 @@ class JournalEntryTest < ActiveSupport::TestCase
   test '#save assigns previous_entry for last transaction of previous day' do
     account = create(:asset_account)
     new_entry = build(:credit, account:, matching_entry: build(:debit))
-    next_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+    next_entry = create(:credit, account:, posted_date: Time.zone.today + 2.days, matching_entry: build(:debit))
     previous_entry = create(:credit, account:, matching_entry: build(:debit))
 
     new_entry.save!
@@ -134,10 +134,28 @@ class JournalEntryTest < ActiveSupport::TestCase
     account = create(:asset_account)
     next_entry = create(:credit, account:, matching_entry: build(:debit))
     new_entry = build(:credit, account:, next_entry:, matching_entry: build(:debit))
-    existing_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+    create(:credit, account:, posted_date: Time.zone.today, matching_entry: build(:debit))
 
     new_entry.save!
 
     assert_equal new_entry.next_entry.id, next_entry.id
+  end
+
+  test '#validate fails when next_entry date is before posted_date' do
+    next_entry = build(:credit, posted_date: Time.zone.today - 1.day, matching_entry: build(:debit))
+    entry = build(:credit, next_entry:, matching_entry: build(:debit))
+    entry.validate
+
+    assert_equal 1, entry.errors.count
+    assert_equal 'Posted date must be after proceding account entry', entry.errors.full_messages.first
+  end
+
+  test '#validate fails when previous_entry date is after posted_date' do
+    previous_entry = build(:credit, posted_date: Time.zone.today + 1.day, matching_entry: build(:debit))
+    entry = build(:credit, previous_entry:, matching_entry: build(:debit))
+    entry.validate
+
+    assert_equal 1, entry.errors.count
+    assert_equal 'Posted date must be before preceding account entry', entry.errors.full_messages.first
   end
 end
