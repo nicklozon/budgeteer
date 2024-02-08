@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# TODO: changing transaction order is a destroy and create, put in a command
+
 ##
 # Represents one side of a double-entry transaction, which are doubly-associated to one another
 #
@@ -9,7 +11,7 @@ class JournalEntry < ApplicationRecord
 
   belongs_to :account
   belongs_to :matching_entry, class_name: 'JournalEntry', autosave: true, validate: false
-  belongs_to :next_entry, class_name: 'JournalEntry', optional: true, autosave: true, dependent: :destroy
+  belongs_to :next_entry, class_name: 'JournalEntry', optional: true, autosave: true
   has_one :previous_entry, class_name: 'JournalEntry', foreign_key: :next_entry_id,
                            inverse_of: :next_entry, dependent: :destroy
 
@@ -24,6 +26,7 @@ class JournalEntry < ApplicationRecord
   validate :validate_posted_date
 
   before_create :assign_associated_entries
+  # TODO: prevent mutation to next_entry
   # TODO: before destroy to associate previous/next entries
 
   ##
@@ -57,6 +60,17 @@ class JournalEntry < ApplicationRecord
 
     super(entry)
     entry.matching_entry = self unless entry.matching_entry
+  end
+
+  def assign_order_number
+    # [1,2] -> [1,x,2] -> [1,2,3]
+    # [1,2][1] -> [1,2][x,1] -> [1,2][1,2]
+    # if previous_entry.posted_date == posted_date
+    #  - previous_entry.order + 1
+    # else
+    #  - 1
+    # if next_entry.posted_date == posted_date
+    #  - next_entry.assign_order_number # n+1
   end
 
   private
@@ -93,30 +107,13 @@ class JournalEntry < ApplicationRecord
   end
 
   def assign_associated_entries
-    # TODO: test that assignment occurs if not specified
-    # TODO: test that next_entry
-    self.next_entry ||= account
-                        .journal_entries
-                        .where('posted_date > ?', posted_date)
-                        .first
+    return if next_entry
 
-    self.previous_entry = next_entry&.previous_entry || account
-                          .journal_entries
-                          .where('posted_date <= ?', posted_date)
-                          .last
-  end
+    next_next_entry = account.journal_entries.where('posted_date > ?', posted_date).first
 
-  # TODO: This should be done only if next_entry is changed?
-  #   - maybe we move this to a command
-  def assign_order_number
-    # TODO: set order number
-    #   previous_entry.order + 1
-    # TODO: set next_entry order number
-    #   order + 1
-    #   This will create an n+1 and violate the unique index
-    #     - we can fetch account entries ordered by order: :desc and process in batches until next_entry is hit
+    self.previous_entry = next_next_entry&.previous_entry ||
+                          account.journal_entries.where('posted_date <= ?', posted_date).last
 
-    # TODO: can we raise an error if we're not in a transaction?
-    #  - could stuff the transaction in a CurrentAttributes record...
+    self.next_entry = next_next_entry
   end
 end

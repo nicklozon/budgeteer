@@ -16,7 +16,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_11_024211) do
 
   create_table "accounts", force: :cascade do |t|
     t.string "title", null: false
-    t.string "type", null: false
+    t.string "account_type", null: false
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -28,16 +28,15 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_11_024211) do
     t.integer "amount_in_cents", null: false
     t.decimal "exchange_rate", precision: 18, scale: 8
     t.integer "balance", null: false
-    t.datetime "posted_date", null: false
-    t.datetime "cleared_date", null: false
+    t.date "posted_date", null: false
+    t.date "cleared_date", null: false
     t.integer "order"
     t.bigint "account_id", null: false
     t.bigint "matching_entry_id"
     t.bigint "next_entry_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "next_entry_id"], name: "index_journal_entries_on_account_id_and_next_entry_id", unique: true
-    t.index ["account_id", "order"], name: "index_journal_entries_on_account_id_and_order", unique: true
+    t.index ["account_id", "posted_date", "order"], name: "index_journal_entries_on_account_id_and_posted_date_and_order", unique: true
     t.index ["account_id"], name: "index_journal_entries_on_account_id"
     t.index ["matching_entry_id"], name: "index_journal_entries_on_matching_entry_id", unique: true
     t.index ["next_entry_id"], name: "index_journal_entries_on_next_entry_id"

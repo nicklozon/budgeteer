@@ -4,7 +4,7 @@ class CreateAccounts < ActiveRecord::Migration[7.1]
   def change
     create_table :accounts do |t|
       t.string :title, null: false
-      t.string :type, null: false
+      t.string :account_type, null: false
       t.string :currency, null: false
 
       t.timestamps

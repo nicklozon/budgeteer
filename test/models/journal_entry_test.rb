@@ -3,7 +3,7 @@
 require 'test_helper'
 
 class JournalEntryTest < ActiveSupport::TestCase
-  test 'entry validation fails when no matching entry' do
+  test '#validate fails when no matching entry' do
     entry = build(:credit)
     entry.validate
 
@@ -11,7 +11,7 @@ class JournalEntryTest < ActiveSupport::TestCase
     assert_equal 'Matching entry must exist', entry.errors.full_messages.first
   end
 
-  test 'entry validation fails when matching entry has same type' do
+  test '#validate fails when matching entry has same type' do
     entry = build(:credit, matching_entry: build(:credit))
     entry.validate
 
@@ -19,7 +19,7 @@ class JournalEntryTest < ActiveSupport::TestCase
     assert_equal 'Transaction type must differ from matching entry', entry.errors.full_messages.first
   end
 
-  test 'entry validation fails when matching entry has differing amount' do
+  test '#validate fails when matching entry has differing amount' do
     entry = build(:valid_credit)
     entry.matching_entry.amount = entry.amount + 0.01
     entry.validate
@@ -28,7 +28,7 @@ class JournalEntryTest < ActiveSupport::TestCase
     assert_equal 'Amount must equal matching entry', entry.errors.full_messages.first
   end
 
-  test 'entry validation fails when matching entry has same account' do
+  test '#validate fails when matching entry has same account' do
     account = build(:asset_account)
     entry = build(:credit, account:, matching_entry: build(:debit, account:))
     entry.validate
@@ -84,5 +84,60 @@ class JournalEntryTest < ActiveSupport::TestCase
     credit_entry.amount = 100
 
     assert_in_delta(12_345, credit_entry.amount_in_cents)
+  end
+
+  test '#save assigns next_entry for first transaction of after posted_date' do
+    account = create(:asset_account)
+    new_entry = build(:credit, account:, matching_entry: build(:debit))
+    existing_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+
+    new_entry.save!
+
+    assert_equal new_entry.next_entry.id, existing_entry.id
+  end
+
+  test '#save does not assign next_entry anything if no older transactions exist' do
+    account = create(:asset_account)
+    new_entry = build(:credit, account:, matching_entry: build(:debit))
+    create(:credit, account:, matching_entry: build(:debit))
+
+    new_entry.save!
+
+    assert_nil new_entry.next_entry
+  end
+
+  test '#save assigns previous_entry to that of next entry\'s' do
+    account = create(:asset_account)
+    new_entry = build(:credit, account:, matching_entry: build(:debit))
+    next_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+    previous_entry = create(:credit, account:, next_entry:, matching_entry: build(:debit))
+
+    new_entry.save!
+
+    assert_equal new_entry.next_entry.id, next_entry.id
+    assert_equal new_entry.previous_entry.id, previous_entry.id
+  end
+
+  test '#save assigns previous_entry for last transaction of previous day' do
+    account = create(:asset_account)
+    new_entry = build(:credit, account:, matching_entry: build(:debit))
+    next_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+    previous_entry = create(:credit, account:, matching_entry: build(:debit))
+
+    new_entry.save!
+
+    assert_equal new_entry.next_entry.id, next_entry.id
+    assert_equal new_entry.previous_entry.id, previous_entry.id
+  end
+
+  test '#save does not assign new next_entry if it exists' do
+    account = create(:asset_account)
+    next_entry = create(:credit, account:, matching_entry: build(:debit))
+    new_entry = build(:credit, account:, next_entry:, matching_entry: build(:debit))
+    existing_entry = create(:credit, account:, posted_date: DateTime.now + 2.days, matching_entry: build(:debit))
+
+    new_entry.save!
+
+    assert_equal new_entry.next_entry.id, next_entry.id
   end
 end

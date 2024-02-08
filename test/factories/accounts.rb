@@ -9,11 +9,11 @@ FactoryBot.define do
     currency { 'USD' }
 
     trait :asset do
-      type { 'asset' } # TODO: need to identify all account types
+      account_type { 'asset' } # TODO: need to identify all account types
     end
 
     trait :liability do
-      type { 'liability' } # TODO: need to identify all account types
+      account_type { 'liability' } # TODO: need to identify all account types
     end
 
     factory :asset_account, traits: [:asset]
