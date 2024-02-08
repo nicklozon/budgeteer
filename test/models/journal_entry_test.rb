@@ -5,6 +5,7 @@ require 'test_helper'
 class JournalEntryTest < ActiveSupport::TestCase
   test '#validate fails when no matching entry' do
     entry = build(:credit)
+
     entry.validate
 
     assert_equal 1, entry.errors.count
@@ -13,6 +14,7 @@ class JournalEntryTest < ActiveSupport::TestCase
 
   test '#validate fails when matching entry has same type' do
     entry = build(:credit, matching_entry: build(:credit))
+
     entry.validate
 
     assert_equal 1, entry.errors.count
@@ -22,6 +24,7 @@ class JournalEntryTest < ActiveSupport::TestCase
   test '#validate fails when matching entry has differing amount' do
     entry = build(:valid_credit)
     entry.matching_entry.amount = entry.amount + 0.01
+
     entry.validate
 
     assert_equal 1, entry.errors.count
@@ -31,6 +34,7 @@ class JournalEntryTest < ActiveSupport::TestCase
   test '#validate fails when matching entry has same account' do
     account = build(:asset_account)
     entry = build(:credit, account:, matching_entry: build(:debit, account:))
+
     entry.validate
 
     assert_equal 1, entry.errors.count
@@ -144,6 +148,7 @@ class JournalEntryTest < ActiveSupport::TestCase
   test '#validate fails when next_entry date is before posted_date' do
     next_entry = build(:credit, posted_date: Time.zone.today - 1.day, matching_entry: build(:debit))
     entry = build(:credit, next_entry:, matching_entry: build(:debit))
+
     entry.validate
 
     assert_equal 1, entry.errors.count
@@ -153,9 +158,22 @@ class JournalEntryTest < ActiveSupport::TestCase
   test '#validate fails when previous_entry date is after posted_date' do
     previous_entry = build(:credit, posted_date: Time.zone.today + 1.day, matching_entry: build(:debit))
     entry = build(:credit, previous_entry:, matching_entry: build(:debit))
+
     entry.validate
 
     assert_equal 1, entry.errors.count
     assert_equal 'Posted date must be before preceding account entry', entry.errors.full_messages.first
+  end
+
+  test '#validate fails when next_entry is updated' do
+    next_entry = create(:credit, matching_entry: build(:debit))
+    next_next_entry = create(:credit, matching_entry: build(:debit))
+    entry = create(:credit, next_entry:, matching_entry: build(:debit))
+    entry.next_entry = next_next_entry
+
+    entry.validate
+
+    assert_equal 1, entry.errors.count
+    assert_equal 'Next entry cannot be changed', entry.errors.full_messages.first
   end
 end

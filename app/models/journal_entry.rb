@@ -24,10 +24,10 @@ class JournalEntry < ApplicationRecord
   validates :amount_in_cents, numericality: { greater_than: 0 }
   validate :validate_entry_integrity
   validate :validate_posted_date
+  validate :validate_next_entry_not_changed
 
   before_create :assign_associated_entries
   before_create :assign_order_number
-  # TODO: prevent mutation to next_entry
   # TODO: before destroy to associate previous/next entries
 
   ##
@@ -63,6 +63,8 @@ class JournalEntry < ApplicationRecord
     entry.matching_entry = self unless entry.matching_entry
   end
 
+  ##
+  # Upon entry creation assigns an order value identifying the sequence of account transactions for the posted_date
   def assign_order_number
     # TODO
     # [1,2] -> [1,x,2] -> [1,2,3]
@@ -112,5 +114,11 @@ class JournalEntry < ApplicationRecord
                           account.journal_entries.where('posted_date <= ?', posted_date).last
 
     self.next_entry = next_next_entry
+  end
+
+  def validate_next_entry_not_changed
+    if next_entry_changed? && persisted?
+      errors.add(:next_entry, 'cannot be changed')
+    end
   end
 end
