@@ -66,20 +66,23 @@ class JournalEntry < ApplicationRecord
 
   ##
   # Upon entry creation assigns an order value identifying the sequence of account transactions for the posted_date
-  def assign_order_number
+  def assign_order_number(next_previous_entry = nil)
     # TODO: test and delete these comments
     # [1,2] -> [1,x,2] -> [1,2,3]
     # [1,2][1] -> [1,2][x,1] -> [1,2][1,2]
 
+    # ActiveRecord does not associate inversed relationships because it requires the foreign key
+    next_previous_entry ||= previous_entry
+
     self.order =
-      if previous_entry&.posted_date == posted_date
-        previous_entry.order + 1
+      if next_previous_entry&.posted_date == posted_date
+        next_previous_entry.order + 1
       else
         1
       end
 
     if next_entry&.posted_date == posted_date
-      next_entry.assign_order_number # This is an n+1 problem
+      next_entry.assign_order_number(self) # This is an n+1 problem
     end
   end
 

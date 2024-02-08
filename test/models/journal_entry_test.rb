@@ -178,17 +178,45 @@ class JournalEntryTest < ActiveSupport::TestCase
   end
 
   test '#save assigns order to 1 when no previous_entry' do
+    entry = create(:credit, matching_entry: build(:debit))
+
+    assert_equal 1, entry.order
   end
 
   test '#save assigns order to 1 when previous_entry on another day' do
+    entry = create(:credit, matching_entry: build(:debit))
+    create(:credit, next_entry: entry, posted_date: Time.zone.today - 1.day, matching_entry: build(:debit))
+
+    assert_equal 1, entry.order
   end
 
   test '#save assigns order previous_entry order plus 1' do
+    entry = create(:credit, matching_entry: build(:debit))
+
+    assert_equal 1, entry.order
+
+    create(:credit, next_entry: entry, matching_entry: build(:debit))
+
+    assert_equal 2, entry.order
   end
 
   test '#save increments next_entry order when on same day' do
+    next_entry = create(:credit, matching_entry: build(:debit))
+
+    assert_equal 1, next_entry.order
+
+    create(:credit, next_entry:, matching_entry: build(:debit))
+
+    assert_equal 2, next_entry.order
   end
 
   test '#save does not increment next_entry order when another day' do
+    next_entry = create(:credit, matching_entry: build(:debit))
+
+    assert_equal 1, next_entry.order
+
+    create(:credit, next_entry:, posted_date: Time.zone.today - 1.day, matching_entry: build(:debit))
+
+    assert_equal 1, next_entry.order
   end
 end
