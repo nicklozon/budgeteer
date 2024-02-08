@@ -16,7 +16,9 @@ class CreateJournalEntries < ActiveRecord::Migration[7.1]
       t.references :matching_entry, foreign_key: { to_table: :journal_entries }, index: { unique: true }
       t.references :next_entry, foreign_key: { to_table: :journal_entries }
 
-      t.index [:account_id, :posted_date, :order], unique: true
+      t.index [:account_id, :order]
+      t.index [:account_id, :posted_date, :order]
+      t.index [:posted_date]
 
       t.timestamps
     end

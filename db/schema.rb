@@ -36,10 +36,12 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_11_024211) do
     t.bigint "next_entry_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "posted_date", "order"], name: "index_journal_entries_on_account_id_and_posted_date_and_order", unique: true
+    t.index ["account_id", "order"], name: "index_journal_entries_on_account_id_and_order"
+    t.index ["account_id", "posted_date", "order"], name: "index_journal_entries_on_account_id_and_posted_date_and_order"
     t.index ["account_id"], name: "index_journal_entries_on_account_id"
     t.index ["matching_entry_id"], name: "index_journal_entries_on_matching_entry_id", unique: true
     t.index ["next_entry_id"], name: "index_journal_entries_on_next_entry_id"
+    t.index ["posted_date"], name: "index_journal_entries_on_posted_date"
   end
 
   add_foreign_key "journal_entries", "accounts"

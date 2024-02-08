@@ -176,4 +176,19 @@ class JournalEntryTest < ActiveSupport::TestCase
     assert_equal 1, entry.errors.count
     assert_equal 'Next entry cannot be changed', entry.errors.full_messages.first
   end
+
+  test '#save assigns order to 1 when no previous_entry' do
+  end
+
+  test '#save assigns order to 1 when previous_entry on another day' do
+  end
+
+  test '#save assigns order previous_entry order plus 1' do
+  end
+
+  test '#save increments next_entry order when on same day' do
+  end
+
+  test '#save does not increment next_entry order when another day' do
+  end
 end
