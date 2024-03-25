@@ -23,7 +23,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_11_024211) do
   end
 
   create_table "journal_entries", force: :cascade do |t|
-    t.string "description", null: false
     t.integer "transaction_type", null: false
     t.integer "amount_in_cents", null: false
     t.decimal "exchange_rate", precision: 18, scale: 8
@@ -31,20 +30,26 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_11_024211) do
     t.date "posted_date", null: false
     t.date "cleared_date", null: false
     t.integer "order"
+    t.bigint "transackshun_id", null: false
     t.bigint "account_id", null: false
-    t.bigint "matching_entry_id"
     t.bigint "next_entry_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "order"], name: "index_journal_entries_on_account_id_and_order"
     t.index ["account_id", "posted_date", "order"], name: "index_journal_entries_on_account_id_and_posted_date_and_order"
     t.index ["account_id"], name: "index_journal_entries_on_account_id"
-    t.index ["matching_entry_id"], name: "index_journal_entries_on_matching_entry_id", unique: true
     t.index ["next_entry_id"], name: "index_journal_entries_on_next_entry_id"
     t.index ["posted_date"], name: "index_journal_entries_on_posted_date"
+    t.index ["transackshun_id"], name: "index_journal_entries_on_transackshun_id"
+  end
+
+  create_table "transackshuns", force: :cascade do |t|
+    t.string "description", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   add_foreign_key "journal_entries", "accounts"
-  add_foreign_key "journal_entries", "journal_entries", column: "matching_entry_id"
   add_foreign_key "journal_entries", "journal_entries", column: "next_entry_id"
+  add_foreign_key "journal_entries", "transackshuns"
 end

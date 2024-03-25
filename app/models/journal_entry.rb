@@ -9,11 +9,15 @@
 class JournalEntry < ApplicationRecord
   default_scope { order(order: :asc) }
 
+  before_create :assign_associated_entries
+  before_create :assign_order_number
+  before_destroy :unassign_associated_entries
+
   belongs_to :account
-  belongs_to :matching_entry, class_name: 'JournalEntry', autosave: true, validate: false
+  belongs_to :transackshun
   belongs_to :next_entry, class_name: 'JournalEntry', optional: true, autosave: true, validate: false
-  has_one :previous_entry, class_name: 'JournalEntry', foreign_key: :next_entry_id,
-                           inverse_of: :next_entry, dependent: :destroy
+  has_one :previous_entry, class_name: 'JournalEntry', autosave: true, validate: false, foreign_key: :next_entry_id,
+                           inverse_of: :next_entry, dependent: :restrict_with_error
 
   enum transaction_type: {
     credit: 1,
@@ -22,13 +26,8 @@ class JournalEntry < ApplicationRecord
 
   validates :posted_date, presence: true
   validates :amount_in_cents, numericality: { greater_than: 0 }
-  validate :validate_entry_integrity
   validate :validate_posted_date
-  validate :validate_next_entry_not_changed
 
-  before_create :assign_associated_entries
-  before_create :assign_order_number
-  # TODO: before destroy to associate previous/next entries
   # TODO: set balance on create/update
 
   ##
@@ -51,27 +50,15 @@ class JournalEntry < ApplicationRecord
       value,
       account.currency
     ).cents / exchange_rate
+
+    amount
   end
 
   ##
-  # Associates two journal entries together
-  def matching_entry=(entry)
-    if entry.matching_entry && entry.matching_entry != self
-      raise StandardError, "Invalid Matching Journal Entry: #{entry.id} already has a matching entry"
-    end
-
-    super(entry)
-    entry.matching_entry = self unless entry.matching_entry
-  end
-
-  ##
-  # Upon entry creation assigns an order value identifying the sequence of account transactions for the posted_date
+  # Assigns an order value identifying the sequence of account transactions for the posted_date
   def assign_order_number(next_previous_entry = nil)
-    # TODO: test and delete these comments
-    # [1,2] -> [1,x,2] -> [1,2,3]
-    # [1,2][1] -> [1,2][x,1] -> [1,2][1,2]
-
-    # ActiveRecord does not associate inversed relationships because it requires the foreign key
+    # ActiveRecord does not associate inversed relationships before save because it requires the foreign key
+    #   So we manually pass the previous_entry
     next_previous_entry ||= previous_entry
 
     self.order =
@@ -81,28 +68,10 @@ class JournalEntry < ApplicationRecord
         1
       end
 
-    if next_entry&.posted_date == posted_date
-      next_entry.assign_order_number(self) # This is an n+1 problem
-    end
+    next_entry&.assign_order_number(self) # This is an n+1 problem
   end
 
   private
-
-  def validate_entry_integrity
-    return unless matching_entry
-
-    if amount_in_cents != matching_entry.amount_in_cents
-      errors.add(:amount, 'must equal matching entry')
-    end
-
-    if transaction_type == matching_entry.transaction_type
-      errors.add(:transaction_type, 'must differ from matching entry')
-    end
-
-    if account == matching_entry.account
-      errors.add(:account, 'must differ from matching entry')
-    end
-  end
 
   def validate_posted_date
     if next_entry && posted_date > next_entry.posted_date
@@ -125,9 +94,11 @@ class JournalEntry < ApplicationRecord
     self.next_entry = next_next_entry
   end
 
-  def validate_next_entry_not_changed
-    if next_entry_changed? && persisted?
-      errors.add(:next_entry, 'cannot be changed')
-    end
+  def unassign_associated_entries
+    previous_entry&.update(next_entry:)
+    reload
+    # TODO: test this
+    assign_order_number
+    true
   end
 end
